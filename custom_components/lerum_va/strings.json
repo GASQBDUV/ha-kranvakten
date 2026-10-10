@@ -1,0 +1,48 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Water utility portal (EDP Future Webb)",
+        "description": "Log in with the same details as on vatjanst.lerum.se. The customer number is on your invoice.",
+        "data": {
+          "customer_id": "Customer number",
+          "personal_number": "Personal identity number (YYYYMMDDXXXX)",
+          "base_url": "Portal URL"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Log in again",
+        "data": {
+          "customer_id": "Customer number",
+          "personal_number": "Personal identity number (YYYYMMDDXXXX)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Login failed. Check customer number and personal identity number.",
+      "invalid_personal_number": "Personal identity number must be 12 digits (YYYYMMDDXXXX).",
+      "cannot_connect": "Could not reach the portal.",
+      "no_services": "No subscriptions found on the account."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Login updated."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "meter_reading": {
+        "name": "Meter reading"
+      },
+      "last_reading_date": {
+        "name": "Last reading date"
+      },
+      "annual_consumption": {
+        "name": "Annual consumption"
+      },
+      "estimated_annual_cost": {
+        "name": "Estimated annual cost"
+      }
+    }
+  }
+}

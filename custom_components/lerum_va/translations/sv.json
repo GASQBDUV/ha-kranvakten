@@ -1,0 +1,40 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "VA-portal (EDP Future Webb)",
+        "description": "Logga in med samma uppgifter som på vatjanst.lerum.se. Kundnumret står på din faktura.",
+        "data": {
+          "customer_id": "Kundnummer",
+          "personal_number": "Personnummer (ÅÅÅÅMMDDXXXX)",
+          "base_url": "Portalens adress"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Logga in igen",
+        "data": {
+          "customer_id": "Kundnummer",
+          "personal_number": "Personnummer (ÅÅÅÅMMDDXXXX)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Inloggningen misslyckades. Kontrollera kundnummer och personnummer.",
+      "invalid_personal_number": "Personnumret ska vara 12 siffror (ÅÅÅÅMMDDXXXX).",
+      "cannot_connect": "Kunde inte nå portalen.",
+      "no_services": "Hittade inga abonnemang på kontot."
+    },
+    "abort": {
+      "already_configured": "Det här kontot är redan tillagt.",
+      "reauth_successful": "Inloggningen är uppdaterad."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "meter_reading": { "name": "Mätarställning" },
+      "last_reading_date": { "name": "Senaste avläsning" },
+      "annual_consumption": { "name": "Årsförbrukning" },
+      "estimated_annual_cost": { "name": "Beräknad årskostnad" }
+    }
+  }
+}
