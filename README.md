@@ -1,4 +1,4 @@
-# Lerum VA (EDP Future) för Home Assistant
+# Kranvakten 💧 – Lerum VA (EDP Future) för Home Assistant
 
 Hämtar mätarställning och förbrukning från Lerums kommuns VA-portal
 (`vatjanst.lerum.se`, EDP Future Webb). Fungerar troligen även för andra
@@ -14,7 +14,9 @@ kommuner som kör samma portal – ändra bara portalens adress vid inställning
 | Beräknad årskostnad | SEK | |
 
 Data hämtas en gång i månaden (var 30:e dag) och dessutom när Home Assistant startar.
-Vill du hämta direkt kan du köra åtgärden `homeassistant.update_entity` på en av sensorerna. Värdena ändras bara när mätaren läses av
+Vill du hämta direkt kan du köra åtgärden `homeassistant.update_entity` på en av sensorerna.
+
+Värdena ändras bara när mätaren läses av
 (egenavläsning eller kommunens avläsning), så det blir inga timvärden.
 
 ## Installation
@@ -22,8 +24,9 @@ Vill du hämta direkt kan du köra åtgärden `homeassistant.update_entity` på 
 **Manuellt:** kopiera mappen `custom_components/lerum_va` till
 `/config/custom_components/` i Home Assistant och starta om.
 
-**HACS:** lägg upp mappen i ett eget GitHub-repo och lägg till det som
-*Custom repository* (typ *Integration*) i HACS.
+**HACS:** HACS → ⋮ → *Custom repositories* → lägg till
+`https://github.com/GASQBDUV/ha-kranvakten` med typen *Integration*,
+installera **Lerum VA (EDP Future)** och starta om.
 
 ## Inställning
 
