@@ -131,6 +131,26 @@ def parse_service_page(raw_html: str) -> dict:
     }
 
 
+def _summary(raw_html: str) -> str:
+    """Kort, ofarlig beskrivning av en sida för felsökning (titel + felmeddelanden)."""
+    title = re.search(r"<title[^>]*>(.*?)</title>", raw_html, re.S | re.I)
+    errors = re.findall(
+        r'class="[^"]*(?:validation|error|Error|alert)[^"]*"[^>]*>(.*?)</',
+        raw_html,
+        re.S,
+    )
+    errors = [e for e in (_text(x) for x in errors) if e]
+    has_login_form = 'name="Identitynumber"' in raw_html
+    body = re.search(r"<body[^>]*>(.*)", raw_html, re.S | re.I)
+    snippet = _text(re.sub(r"<script.*?</script>|<style.*?</style>", " ",
+                           body.group(1) if body else raw_html, flags=re.S | re.I))
+    return (
+        f"titel={_text(title.group(1)) if title else '?'!r}, "
+        f"inloggningsformulär={has_login_form}, fel={errors[:5]}, "
+        f"längd={len(raw_html)}, text={snippet[:200]!r}"
+    )
+
+
 def _is_logged_in(raw_html: str) -> bool:
     return "LogOut" in raw_html and 'name="Identitynumber"' not in raw_html
 
@@ -145,13 +165,30 @@ class EdpFutureClient:
         self._base = base_url.rstrip("/")
         self._customer_id = str(customer_id).strip()
         self._personal_number = re.sub(r"\D", "", str(personal_number))
+        self._origin = self._base
+        self._session_jar: aiohttp.CookieJar | None = None
+        self.last_status: int | None = None
+        self.last_url: str | None = None
+        self.last_history: list[str] = []
 
     async def async_fetch(self) -> EdpData:
         """Logga in, hämta alla abonnemang och logga ut."""
         jar = aiohttp.CookieJar(unsafe=True)
+        origin = re.match(r"https?://[^/]+", self._base)
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                "image/avif,image/webp,*/*;q=0.8"
+            ),
+            "Accept-Language": "sv-SE,sv;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Upgrade-Insecure-Requests": "1",
+        }
+        self._origin = origin.group(0) if origin else self._base
         async with aiohttp.ClientSession(
-            cookie_jar=jar, timeout=TIMEOUT, headers={"User-Agent": USER_AGENT}
+            cookie_jar=jar, timeout=TIMEOUT, headers=headers
         ) as session:
+            self._session_jar = jar
             await self._login(session)
             try:
                 return await self._fetch_services(session)
@@ -163,24 +200,42 @@ class EdpFutureClient:
                     pass
 
     async def _request(
-        self, session: aiohttp.ClientSession, method: str, path: str, data=None
+        self,
+        session: aiohttp.ClientSession,
+        method: str,
+        path: str,
+        data=None,
+        referer: str | None = None,
     ) -> str:
         url = f"{self._base}{path}"
+        headers: dict[str, str] = {}
+        if data is not None:
+            headers["Origin"] = self._origin
+            headers["Referer"] = referer or url
         try:
-            async with session.request(
-                method,
-                url,
-                data=data,
-                headers={"Referer": url} if data else None,
-            ) as resp:
+            async with session.request(method, url, data=data, headers=headers) as resp:
+                body = await resp.text()
+                self.last_status = resp.status
+                self.last_url = str(resp.url)
+                self.last_history = [
+                    f"{r.status} {r.headers.get('Location', '')}" for r in resp.history
+                ]
+                _LOGGER.debug(
+                    "%s %s -> %s %s (redirects: %s)",
+                    method, path, resp.status, resp.url, self.last_history,
+                )
                 if resp.status >= 400:
-                    raise EdpError(f"{method} {path} gav HTTP {resp.status}")
-                return await resp.text()
+                    raise EdpError(
+                        f"{method} {path} gav HTTP {resp.status}: {_summary(body)}"
+                    )
+                return body
         except aiohttp.ClientError as err:
             raise EdpError(f"{method} {path} misslyckades: {err}") from err
 
     async def _login(self, session: aiohttp.ClientSession) -> None:
+        login_url = f"{self._base}/EDPLogin/LogIn"
         await self._request(session, "GET", "/EDPLogin/LogIn")
+        cookies_before = sorted(c.key for c in self._session_jar)
         body = await self._request(
             session,
             "POST",
@@ -189,8 +244,19 @@ class EdpFutureClient:
                 "CustomerId": self._customer_id,
                 "Identitynumber": self._personal_number,
             },
+            referer=login_url,
         )
         if not _is_logged_in(body):
+            _LOGGER.warning(
+                "Inloggning nekad. Status %s, hamnade på %s, redirects %s, "
+                "cookies före POST %s, efter %s. Sida: %s",
+                self.last_status,
+                self.last_url,
+                self.last_history,
+                cookies_before,
+                sorted(c.key for c in self._session_jar),
+                _summary(body),
+            )
             raise EdpAuthError("Inloggningen misslyckades (kontrollera kund-/personnummer)")
 
     async def _fetch_services(self, session: aiohttp.ClientSession) -> EdpData:
